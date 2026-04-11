@@ -1,0 +1,6 @@
+main_old
+.idea/
+.ipynb_checkpoints/
+venv/
+__pycache__/
+*.mp4

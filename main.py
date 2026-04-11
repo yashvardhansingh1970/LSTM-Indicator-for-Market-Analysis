@@ -13,40 +13,52 @@ import plotly.graph_objs as go
 st.title('Stock Trend Prediction')
 #user_input
 user_input = st.text_input('Enter Stock Ticker','AAPL')
-start_date = st.date_input("Select a start date:")
+start_date = st.date_input("Select a start date:", value=pd.to_datetime('2018-08-10').date())
 
 # Create a date input field for the user to select an end date
-end_date = st.date_input("Select an end date:")
+end_date = st.date_input("Select an end date:", value=pd.to_datetime('2023-09-06').date())
+
+df = None  # Initialize df variable
 
 if start_date <= end_date:
     # Fetch historical stock data using yfinance
     try:
         # Download the historical data
         df = yf.download(user_input, start=start_date, end=end_date)
-
+        
+        # Check if data was actually downloaded
+        if df.empty:
+            st.error(f"No data found for {user_input} between {start_date} and {end_date}. Please check the ticker symbol and date range.")
+            st.stop()
+        
         # Display the historical data
         st.write(f"Historical data for {user_input} from {start_date} to {end_date}:")
         st.write(df)
 
     except Exception as e:
         st.error(f"Error fetching data: {e}")
+        st.stop()
 else:
     st.error("End date must be greater than or equal to start date.")
-# df = yf.download(user_input, start=start_date, end=end_date)
+    st.stop()
+
+# Only proceed if we have data
+if df is None or df.empty:
+    st.error("No data available to process.")
+    st.stop()
 
 st.subheader('Closing Price vs Time Chart')
-trace = go.Scatter(x=df.index, y=df["Close"], mode='lines', name='Closing Price')
 
-layout = go.Layout(
-    title=f"{user_input} Closing Price",
-    xaxis=dict(title="Date"),
-    yaxis=dict(title="Price (USD)")
-)
-
-fig = go.Figure(data=[trace], layout=layout)
-
-# Show the interactive plot in the Jupyter Notebook
-st.plotly_chart(fig)
+# Create matplotlib figure for closing price
+fig_close, ax_close = plt.subplots(figsize=(12, 6))
+ax_close.plot(df.index, df['Close'], color='blue', linewidth=1)
+ax_close.set_title(f'{user_input} Closing Price')
+ax_close.set_xlabel('Date')
+ax_close.set_ylabel('Price (USD)')
+ax_close.grid(True, alpha=0.3)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig_close)
 
 # df.reset_index(inplace=True)
 # df.head()
@@ -81,13 +93,13 @@ sns.set_style('whitegrid')
 # st.pyplot(fig)
 trace = go.Scatter(x=df.index, y=df["Z-Score"], mode='lines', name='Z-Score of Log-Returns (Standardisation')
 layout = go.Layout(
-    title=f"Closing Price",
+    title=f"{user_input} Z-Score of Log-Returns (Standardisation)",
     xaxis=dict(title="Date"),
     yaxis=dict(title="Z-Score")
 )
 
 fig1 = go.Figure(data=[trace], layout=layout)
-st.plotly_chart(fig1)
+st.plotly_chart(fig1, use_container_width=True)
 
 #metric information
 st.subheader('Mean, Variance, Std Deviation & Percentage Increase')
@@ -106,24 +118,19 @@ df.head()
 
 #100ma plot
 st.subheader('Closing Price vs Time Chart with 100MA')
-fig2=plt.figure(figsize=(20,12))
 ma100 = df.Close.rolling(100).mean()
-trace_ma100 = go.Scatter(x=df.index, y=ma100, mode='lines',name='100ma')
-trace_close = go.Scatter(x=df.index, y=df["Close"], mode='lines', name='Price')
-layout = go.Layout(
-    title=f"Closing Price", legend=dict(
-    orientation="h",
-    yanchor="bottom",
-    y=1.02,
-    xanchor="right",
-    x=1
-)
-    # xaxis=dict(title="Number of Days "),
-    # yaxis=dict(title="Price(USD)")
-)
 
-fig2 = go.Figure(data=[trace_close,trace_ma100], layout=layout)
-st.plotly_chart(fig2)
+fig2, ax2 = plt.subplots(figsize=(12, 6))
+ax2.plot(df['Date'], df['Close'], label='Close Price', color='blue')
+ax2.plot(df['Date'], ma100, label='100MA', color='orange')
+ax2.set_title(f'{user_input} Closing Price with 100-Day Moving Average')
+ax2.set_xlabel('Date')
+ax2.set_ylabel('Price (USD)')
+ax2.legend()
+ax2.grid(True, alpha=0.3)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig2)
 
 
 # st.subheader('Closing Price vs Time Chart with 100MA')
@@ -138,24 +145,19 @@ st.plotly_chart(fig2)
 st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
 ma100 = df.Close.rolling(100).mean()
 ma200 = df.Close.rolling(200).mean()
-trace_ma100 = go.Scatter(x=df.index, y=ma100, mode='lines',name='100ma')
-trace_ma200 = go.Scatter(x=df.index, y=ma200, mode='lines',name='200ma')
-trace_close = go.Scatter(x=df.index, y=df["Close"], mode='lines', name='Price')
 
-layout = go.Layout(
-    title=f"Closing Price", legend=dict(
-    orientation="h",
-    yanchor="bottom",
-    y=1.02,
-    xanchor="right",
-    x=1
-    )
-    # xaxis=dict(title="Price(USD)"),
-    # yaxis=dict(title="Number of Days")
-)
-
-fig2 = go.Figure(data=[trace_close,trace_ma100, trace_ma200], layout=layout)
-st.plotly_chart(fig2)
+fig3, ax3 = plt.subplots(figsize=(12, 6))
+ax3.plot(df['Date'], df['Close'], label='Close Price', color='blue')
+ax3.plot(df['Date'], ma100, label='100MA', color='orange')
+ax3.plot(df['Date'], ma200, label='200MA', color='red')
+ax3.set_title(f'{user_input} Closing Price with 100MA & 200MA')
+ax3.set_xlabel('Date')
+ax3.set_ylabel('Price (USD)')
+ax3.legend()
+ax3.grid(True, alpha=0.3)
+plt.xticks(rotation=45)
+plt.tight_layout()
+st.pyplot(fig3)
 
 
 # st.subheader('Closing Price vs Time Chart with 100MA & 200MA')
@@ -172,11 +174,25 @@ data_training =pd.DataFrame(df['Close'][0:int(len(df)*0.70)])
 data_testing=pd.DataFrame(df['Close'][int(len(df)*0.70):int(len(df))])
 
 from sklearn.preprocessing import MinMaxScaler
+import tensorflow as tf
 scaler = MinMaxScaler(feature_range=(0,1))
 
 data_training_array = scaler.fit_transform(data_training)
 
-model = load_model('keras_model.h5')
+# Custom object scope to handle deprecated parameters
+def custom_lstm(**kwargs):
+    # Remove deprecated parameters
+    kwargs.pop('time_major', None)
+    return tf.keras.layers.LSTM(**kwargs)
+
+# Load model with custom objects
+try:
+    model = load_model('Z:\\Data Matchers\\Yash\\Python\\website\\lstm\\LSTM-Indicator-for-Market-Analysis-main\\keras_model.h5',
+                      custom_objects={'LSTM': custom_lstm})
+except Exception as e:
+    st.error(f"Error loading model: {e}")
+    st.error("The model may be incompatible with the current TensorFlow version. Please retrain the model or use a compatible version.")
+    st.stop()
 
 past_100_days = data_training.tail(100)
 final_df = pd.concat([past_100_days, data_testing], ignore_index=True)
@@ -190,22 +206,35 @@ for i in range(100, input_data.shape[0]):
     y_test.append(input_data[i,0])
 x_test, y_test = np.array(x_test), np.array(y_test)
 y_predicted = model.predict(x_test)
-scaler = scaler.scale_
+scaler_scale = scaler.scale_
 
-scale_factor = 1/0.01399972
+scale_factor = 1/scaler_scale[0]
 y_predicted = y_predicted * scale_factor
 y_test = y_test * scale_factor
 
 
 #predicted vs observed plot
-
-
-
 st.subheader('Predictions vs Original(LSTM)')
-fig2 = plt.figure(figsize=(12,6))
-plt.plot(y_test,'b', label ='Original Price')
-plt.plot(y_predicted,'r',label='Predicted Price')
-plt.xlabel('Time')
-plt.ylabel('Price')
-plt.legend()
-st.pyplot(fig2)
+
+# Create time index for predictions
+time_index = list(range(len(y_test)))
+
+# Create Plotly traces
+trace_original = go.Scatter(x=time_index, y=y_test.flatten(), mode='lines', name='Original Price', line=dict(color='blue'))
+trace_predicted = go.Scatter(x=time_index, y=y_predicted.flatten(), mode='lines', name='Predicted Price', line=dict(color='red'))
+
+layout = go.Layout(
+    title=f"{user_input} LSTM Predictions vs Original Prices",
+    xaxis=dict(title="Time"),
+    yaxis=dict(title="Price"),
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    )
+)
+
+fig_pred = go.Figure(data=[trace_original, trace_predicted], layout=layout)
+st.plotly_chart(fig_pred, use_container_width=True)
